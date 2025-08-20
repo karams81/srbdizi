@@ -1,5 +1,6 @@
+
 # GitHub Actions İş Akışının Adı
-name: Amazon Prime Scraper
+name: Tum Platformlari Guncelle
 
 # Bu iş akışının ne zaman çalışacağını belirleyen tetikleyiciler
 on:
@@ -8,23 +9,23 @@ on:
     branches: [ main ]
   # GitHub Actions arayüzünden manuel olarak çalıştırma imkanı sunar
   workflow_dispatch:
-  # Belirli bir zamanlamaya göre otomatik çalıştır (örneğin her 6 saatte bir)
-  # schedule:
-  # - cron: '0 */6 * * *'
+  # Her 6 saatte bir otomatik çalıştır
+  schedule:
+    - cron: '0 */6 * * *'
 
-# İş akışında çalıştırılacak işler (jobs)
+# İş akışında çalıştırılacak işler
 jobs:
-  build:
-    # İşin çalışacağı sanal makine ortamı (en son Ubuntu versiyonu)
+  build-and-commit:
+    # İşin çalışacağı sanal makine ortamı
     runs-on: ubuntu-latest
 
     # İş akışına deponuza yazma izni veriyoruz
     permissions:
       contents: write
 
-    # İşin adımları (steps)
+    # İşin adımları
     steps:
-      # 1. Adım: Kodu sanal makineye kopyala (checkout)
+      # 1. Adım: Kodu sanal makineye kopyala
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -40,27 +41,43 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Adım: Python betiğini çalıştır
-      - name: Run the scraper script
-        run: python "${{ github.workspace }}/m3u/AmazonPrime.py"
+      # 4. Adım: Tüm scraper betiklerini sırayla çalıştır
+      # Bir betik hata verse bile diğerlerinin çalışmaya devam etmesi için "continue-on-error: true" kullanıldı.
+      - name: Run All Scraper Scripts
+        continue-on-error: true
+        run: |
+          python "${{ github.workspace }}/m3u/AmazonPrime.py"
+          python "${{ github.workspace }}/m3u/Blutv.py"
+          python "${{ github.workspace }}/m3u/Disney.py"
+          python "${{ github.workspace }}/m3u/Exxen.py"
+          python "${{ github.workspace }}/m3u/Gain.py"
+          python "${{ github.workspace }}/m3u/HBOMax.py"
+          python "${{ github.workspace }}/m3u/Hulu.py"
+          python "${{ github.workspace }}/m3u/Netflix.py"
+          python "${{ github.workspace }}/m3u/Paramount.py"
+          python "${{ github.workspace }}/m3u/TODTV.py"
+          python "${{ github.workspace }}/m3u/Tabii.py"
+          python "${{ github.workspace }}/m3u/UnutulmazDiziler.py"
+          python "${{ github.workspace }}/m3u/platform_scrape.py"
 
       # 5. Adım: Değişiklikleri Depoya İşle (Commit and Push)
       - name: Commit and push if there are changes
         run: |
-          # Oluşturulan M3U dosyasını doğru klasöre taşı
-          mv "AmazonPrime.m3u" "m3u/AmazonPrime.m3u"
+          # Betiklerin ana dizine oluşturduğu tüm .m3u dosyalarını m3u/ klasörüne taşı
+          # Bu komut dosya adlarındaki boşluk veya özel karakterlerle başa çıkabilir.
+          find . -maxdepth 1 -type f -name "*.m3u" -exec mv {} m3u/ \;
 
           # Git için kullanıcı yapılandırması yap
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-          # Değişiklikleri Git'e ekle
-          git add m3u/"AmazonPrime.m3u"
+          # m3u klasöründeki tüm değişiklikleri Git'e ekle
+          git add m3u/
 
-          # Sadece M3U dosyasında bir değişiklik varsa commit at ve push'la
+          # Eğer işlenecek bir değişiklik varsa, commit at ve push'la
           if ! git diff --staged --quiet; then
-            git commit -m "Güncel: Amazon Prime M3U listesi otomatik olarak güncellendi"
+            git commit -m "Güncel: M3U listeleri otomatik olarak güncellendi"
             git push
           else
-            echo "M3U listesinde herhangi bir değişiklik bulunamadı. Commit atılmayacak."
+            echo "M3U listelerinde herhangi bir değişiklik bulunamadı. Commit atılmayacak."
           fi
