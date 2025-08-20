@@ -1,0 +1,66 @@
+# GitHub Actions İş Akışının Adı
+name: Amazon Prime Scraper
+
+# Bu iş akışının ne zaman çalışacağını belirleyen tetikleyiciler
+on:
+  # "main" branch'ine her push yapıldığında çalıştır
+  push:
+    branches: [ main ]
+  # GitHub Actions arayüzünden manuel olarak çalıştırma imkanı sunar
+  workflow_dispatch:
+  # Belirli bir zamanlamaya göre otomatik çalıştır (örneğin her 6 saatte bir)
+  # schedule:
+  # - cron: '0 */6 * * *'
+
+# İş akışında çalıştırılacak işler (jobs)
+jobs:
+  build:
+    # İşin çalışacağı sanal makine ortamı (en son Ubuntu versiyonu)
+    runs-on: ubuntu-latest
+
+    # İş akışına deponuza yazma izni veriyoruz
+    permissions:
+      contents: write
+
+    # İşin adımları (steps)
+    steps:
+      # 1. Adım: Kodu sanal makineye kopyala (checkout)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Adım: Python ortamını kur
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. Adım: Gerekli kütüphaneleri yükle
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Adım: Python betiğini çalıştır
+      - name: Run the scraper script
+        run: python "${{ github.workspace }}/m3u/AmazonPrime.py"
+
+      # 5. Adım: Değişiklikleri Depoya İşle (Commit and Push)
+      - name: Commit and push if there are changes
+        run: |
+          # Oluşturulan M3U dosyasını doğru klasöre taşı
+          mv "AmazonPrime.m3u" "m3u/AmazonPrime.m3u"
+
+          # Git için kullanıcı yapılandırması yap
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          # Değişiklikleri Git'e ekle
+          git add m3u/"AmazonPrime.m3u"
+
+          # Sadece M3U dosyasında bir değişiklik varsa commit at ve push'la
+          if ! git diff --staged --quiet; then
+            git commit -m "Güncel: Amazon Prime M3U listesi otomatik olarak güncellendi"
+            git push
+          else
+            echo "M3U listesinde herhangi bir değişiklik bulunamadı. Commit atılmayacak."
+          fi
