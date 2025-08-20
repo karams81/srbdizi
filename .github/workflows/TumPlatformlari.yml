@@ -58,7 +58,7 @@ jobs:
           python "${{ github.workspace }}/m3u/TODTV.py"
           python "${{ github.workspace }}/m3u/Tabii.py"
           python "${{ github.workspace }}/m3u/UnutulmazDiziler.py"
-          python "${{ github.workspace }}/m3u/platform_scrape.py"
+          python "${{ github.workspace }}/m3u/fimler.py"
 
       # 5. Adım: Değişiklikleri Depoya İşle (Commit and Push)
       - name: Commit and push if there are changes
