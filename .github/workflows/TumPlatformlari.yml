@@ -1,32 +1,83 @@
-# This is a basic workflow that is manually triggered
 
-name: Manual workflow
+# GitHub Actions İş Akışının Adı
+name: Tum Platformlari Guncelle
 
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
+# Bu iş akışının ne zaman çalışacağını belirleyen tetikleyiciler
 on:
+  # "main" branch'ine her push yapıldığında çalıştır
+  push:
+    branches: [ main ]
+  # GitHub Actions arayüzünden manuel olarak çalıştırma imkanı sunar
   workflow_dispatch:
-    # Inputs the workflow accepts.
-    inputs:
-      name:
-        # Friendly description to be shown in the UI instead of 'name'
-        description: 'Person to greet'
-        # Default value if no value is explicitly provided
-        default: 'World'
-        # Input has to be provided for the workflow to run
-        required: true
-        # The data type of the input
-        type: string
+  # Her 6 saatte bir otomatik çalıştır
+  schedule:
+    - cron: '0 */6 * * *'
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# İş akışında çalıştırılacak işler
 jobs:
-  # This workflow contains a single job called "greet"
-  greet:
-    # The type of runner that the job will run on
+  build-and-commit:
+    # İşin çalışacağı sanal makine ortamı
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    # İş akışına deponuza yazma izni veriyoruz
+    permissions:
+      contents: write
+
+    # İşin adımları
     steps:
-    # Runs a single command using the runners shell
-    - name: Send greeting
-      run: echo "Hello ${{ inputs.name }}"
+      # 1. Adım: Kodu sanal makineye kopyala
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Adım: Python ortamını kur
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. Adım: Gerekli kütüphaneleri yükle
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Adım: Tüm scraper betiklerini sırayla çalıştır
+      # Bir betik hata verse bile diğerlerinin çalışmaya devam etmesi için "continue-on-error: true" kullanıldı.
+      - name: Run All Scraper Scripts
+        continue-on-error: true
+        run: |
+          python "${{ github.workspace }}/m3u/AmazonPrime.py"
+          python "${{ github.workspace }}/m3u/Blutv.py"
+          python "${{ github.workspace }}/m3u/Disney.py"
+          python "${{ github.workspace }}/m3u/Exxen.py"
+          python "${{ github.workspace }}/m3u/Gain.py"
+          python "${{ github.workspace }}/m3u/HBOMax.py"
+          python "${{ github.workspace }}/m3u/Hulu.py"
+          python "${{ github.workspace }}/m3u/Netflix.py"
+          python "${{ github.workspace }}/m3u/Paramount.py"
+          python "${{ github.workspace }}/m3u/TODTV.py"
+          python "${{ github.workspace }}/m3u/Tabii.py"
+          python "${{ github.workspace }}/m3u/UnutulmazDiziler.py"
+          python "${{ github.workspace }}/m3u/platform_scrape.py"
+
+      # 5. Adım: Değişiklikleri Depoya İşle (Commit and Push)
+      - name: Commit and push if there are changes
+        run: |
+          # Betiklerin ana dizine oluşturduğu tüm .m3u dosyalarını m3u/ klasörüne taşı
+          # Bu komut dosya adlarındaki boşluk veya özel karakterlerle başa çıkabilir.
+          find . -maxdepth 1 -type f -name "*.m3u" -exec mv {} m3u/ \;
+
+          # Git için kullanıcı yapılandırması yap
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          # m3u klasöründeki tüm değişiklikleri Git'e ekle
+          git add m3u/
+
+          # Eğer işlenecek bir değişiklik varsa, commit at ve push'la
+          if ! git diff --staged --quiet; then
+            git commit -m "Güncel: M3U listeleri otomatik olarak güncellendi"
+            git push
+          else
+            echo "M3U listelerinde herhangi bir değişiklik bulunamadı. Commit atılmayacak."
+          fi
