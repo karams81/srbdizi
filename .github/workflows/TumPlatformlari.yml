@@ -1,4 +1,3 @@
-
 # GitHub Actions İş Akışının Adı
 name: Tum Platformlari Guncelle
 
@@ -77,6 +76,13 @@ jobs:
           # Eğer işlenecek bir değişiklik varsa, commit at ve push'la
           if ! git diff --staged --quiet; then
             git commit -m "Güncel: M3U listeleri otomatik olarak güncellendi"
+            
+            # --- ENTEGRE EDİLEN KISIM ---
+            # Push yapmadan önce uzak sunucudaki değişiklikleri çek.
+            # --rebase seçeneği, birleştirme (merge) commit'i oluşturmak yerine
+            # kendi commit'inizi en üste taşıyarak daha temiz bir tarihçe sağlar.
+            git pull --rebase
+            
             git push
           else
             echo "M3U listelerinde herhangi bir değişiklik bulunamadı. Commit atılmayacak."
