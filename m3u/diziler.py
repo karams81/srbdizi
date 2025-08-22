@@ -397,7 +397,7 @@ async def get_series_from_homepage():
     async with aiohttp.ClientSession() as session:
         all_series_links = []
         page_num = 1
-        max_pages = 100  
+        max_pages = 10000  
 
         while page_num <= max_pages:
             series_links, has_next_page = await get_series_from_page(session, page_num)
